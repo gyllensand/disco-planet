@@ -11,6 +11,7 @@ import { a, useSpring } from "@react-spring/three";
 import {
   Color,
   DoubleSide,
+  InstancedMesh,
   Mesh,
   PointLightHelper,
   ShaderMaterial,
@@ -18,6 +19,21 @@ import {
 import { start } from "tone";
 import { Sample, CHORDS } from "./App";
 import { useGesture } from "react-use-gesture";
+import { EffectComposer } from "@react-three/postprocessing";
+import GodRaysEffect from "./GodRaysEffect";
+import {
+  RING_COUNT,
+  RING_WIDTH,
+  RING_INNER_RADIUS,
+  THETA_START,
+  THETA_LENGTH,
+  BG_COLORS,
+  DISC_COLORS,
+  RING_COLORS,
+} from "./constants";
+import { Draggable } from "gsap/Draggable";
+import gsap from "gsap";
+const InertiaPlugin = require("./momentum");
 
 declare const fxrand: () => number;
 
@@ -33,152 +49,6 @@ const pickRandomHash = <T,>(array: T[]) =>
   array[Math.floor(fxrand() * array.length)];
 
 export const RING_SEGMENTS = 128;
-
-export const THETA_START = [
-  0,
-  0.25,
-  0.5,
-  0.75,
-  1,
-  1.25,
-  1.5,
-  1.75,
-  2,
-  2.25,
-  2.5,
-  2.75,
-  3,
-  3.25,
-  3.5,
-  3.75,
-  4,
-  4.25,
-  4.5,
-  4.75,
-  5,
-  5.25,
-  5.5,
-  5.75,
-  6,
-  Math.PI * 2,
-];
-
-export const THETA_LENGTH = [
-  1,
-  1.25,
-  1.5,
-  1.75,
-  2,
-  2.25,
-  2.5,
-  2.75,
-  3,
-  3.25,
-  3.5,
-  3.75,
-  4,
-  4.25,
-  4.5,
-  4.75,
-  5,
-  5.25,
-  5.5,
-  5.75,
-  6,
-  Math.PI * 2,
-];
-
-export const RING_COUNT = [10, 15, 20, 25];
-
-export const RING_WIDTH = [0.05, 0.05, 0.05, 0.05, 0.1, 0.1, 0.15, 0.2];
-
-export const RING_INNER_RADIUS = [
-  2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4, 4.25, 4.5, 4.75, 5, 5.25, 5.5, 5.75,
-  6, 6.25, 6.5, 6.75,
-];
-
-export const BG_COLORS = [
-  {
-    theme: "dark",
-    colors: [
-      "#000000", // black
-      "#0b0b4b", // navy
-      "#1b3342", // teal
-      "#1b4225", // green
-      "#421b1b", // burgundy
-    ],
-  },
-  {
-    theme: "light",
-    colors: [
-      "#ffffff", // white
-      "#ffd600", // yellow
-      "#497fff", // blue
-      "#eb3434", // red
-      "#ff6aeb", // pink
-      "#fe7418", // orange
-      "#00f7fb", // turqoise
-    ],
-  },
-];
-
-export const DISC_COLORS = [
-  {
-    theme: "dark",
-    colors: [
-      "#000000", // black
-      "#0b0b4b", // navy
-      "#1b3342", // teal
-      "#1b4225", // green
-      "#421b1b", // burgundy
-    ],
-  },
-  {
-    theme: "light",
-    colors: [
-      "#ffffff", // white
-      "#ffd600", // yellow
-      "#497fff", // blue
-      "#eb3434", // red
-      "#ff6aeb", // pink
-      "#fe7418", // orange
-      "#00f7fb", // turqoise
-    ],
-  },
-];
-
-export const RING_COLORS = [
-  {
-    theme: "dark",
-    colors: [
-      "#000000", // black
-      "#004451", // greenblue
-      "#111033", // blue
-      "#800b0b", // red
-      "#053d08", // green
-      "#dc0fc0", // pink
-      "#aa4807", // orange
-      "#75007e", // purple
-    ],
-  },
-  {
-    theme: "light",
-    colors: [
-      "#ffffff", // white
-      "#ffd600", // yellow
-      "#497fff", // blue
-      "#eb3434", // red
-      "#30f8a0", // green
-      "#ff6aeb", // pink
-      "#fe7418", // orange
-      "#00f7fb", // turqoise
-    ],
-  },
-];
-
-// notes
-// randmoize position of pointlights
-// make sure colors are spot on in contrast
 
 interface Ring {
   width: number;
@@ -216,6 +86,8 @@ const rings = new Array(ringCount).fill(null).map<Ring>(() => {
 
 // @ts-ignore
 window.$fxhashFeatures = {
+  ringCount,
+  rings,
   // pitch,
   // pattern,
   // scale,
@@ -226,12 +98,57 @@ window.$fxhashFeatures = {
   // lineColor2: lineColor2.getHexString(),
 };
 
+// const Rings = () => {
+//   const mesh = useRef<InstancedMesh>();
+//   useEffect(() => {
+//     for (let i = 0; i < ringCount; i++) {
+//       // temp.position.set(Math.random(), Math.random(), Math.random());
+//       // temp.updateMatrix();
+//       // ref.current.setMatrixAt(id, temp.matrix);
+//       // @ts-ignore
+//       // mesh.current!.material.
+
+//       mesh.current!.geometry.attributes.color = rings[i].color;
+//     }
+
+//     mesh.current!.instanceMatrix.needsUpdate = true;
+//   }, []);
+
+//   return (
+//     <instancedMesh ref={mesh} args={[undefined, undefined, ringCount]}>
+//       <ringBufferGeometry args={[20, 20 + 1, RING_SEGMENTS, RING_SEGMENTS]}>
+//         <instancedBufferAttribute
+//           attach="attributes-color"
+//           args={[colorArray, 3]}
+//         />
+//       </ringBufferGeometry>
+//       <meshStandardMaterial color={o.color} />
+//     </instancedMesh>
+//   );
+// };
+
 const Scene = () => {
-  const { viewport } = useThree();
+  const { size, viewport } = useThree((state) => ({
+    size: state.size,
+    viewport: state.viewport,
+  }));
+  const { getCurrentViewport } = viewport;
+  const aspect = useMemo(
+    () => size.width / getCurrentViewport().width,
+    [size, getCurrentViewport]
+  );
+  const lastRotation = useRef(0);
+  const lastPosY = useRef(0);
+  const lastPosX = useRef(0);
+  const outerGroupRef = useRef<Mesh>();
   const groupRef = useRef<Mesh>();
+  const isDragging = useRef(false);
   const [toneInitialized, setToneInitialized] = useState(false);
   const [lastPlayedSample, setLastPlayedSample] = useState<Sample>();
-  const [isPointerDown, setIsPointerDown] = useState(false);
+
+  const [isVerticalRight, setIsVerticalRight] = useState(false);
+  const [isHorizontalBottom, setIsHorizontalBottom] = useState(false);
+  const [hasInitializedTouch, setHasInitializedTouch] = useState(false);
 
   const availableChords = useMemo(
     () =>
@@ -244,16 +161,8 @@ const Scene = () => {
     [viewport.aspect]
   );
 
-  const [{ scale }, setScale] = useSpring(() => ({
-    scale: [1, 1, 1],
-  }));
-
   const [{ rotation }, setRotation] = useSpring(() => ({
     rotation: [0, 0, 0],
-  }));
-
-  const [{ animTime }, setAnimTime] = useSpring(() => ({
-    animTime: 0,
   }));
 
   useEffect(() => {
@@ -271,9 +180,9 @@ const Scene = () => {
   //   }
   // }, [lastPlayedSample]);
 
-  useFrame(({ clock }) => {
-    if (!isPointerDown) {
-      groupRef.current!.rotation.z -= 0.025;
+  useFrame(() => {
+    if (!isDragging.current) {
+      outerGroupRef.current!.rotation.z -= 0.025;
     }
   });
 
@@ -281,6 +190,59 @@ const Scene = () => {
     await start();
     setToneInitialized(true);
   }, []);
+
+  const getRotationDegrees = useCallback((element: HTMLElement) => {
+    var st = window.getComputedStyle(element, null);
+    var tm =
+      st.getPropertyValue("-webkit-transform") ||
+      st.getPropertyValue("-moz-transform") ||
+      st.getPropertyValue("-ms-transform") ||
+      st.getPropertyValue("-o-transform") ||
+      st.getPropertyValue("transform") ||
+      "none";
+
+    if (tm !== "none") {
+      if (!element) {
+        return 0;
+      }
+
+      const string = element?.style.transform.split("(")[2];
+      const value = parseFloat(string.slice(0, string.length - 4));
+
+      return value;
+    }
+    return 0;
+  }, []);
+
+  const onRotation = useCallback(
+    ({ type }) => {
+      const element = document.getElementById("disc");
+      if (!element) {
+        return;
+      }
+
+      if (!isDragging.current && type === "pointermove") {
+        isDragging.current = true;
+      } else if (isDragging.current && type === "pointerup") {
+        isDragging.current = false;
+      }
+
+      groupRef.current!.rotation.z = -getRotationDegrees(element) / 50;
+    },
+    [getRotationDegrees]
+  );
+
+  useEffect(() => {
+    new Draggable("#disc", {
+      type: "rotation",
+      onDrag: onRotation,
+      onThrowUpdate: onRotation,
+      trigger: "#disc",
+      inertia: true,
+      cursor: "default",
+      activeCursor: "grabbing",
+    });
+  }, [onRotation]);
 
   const onClick = useCallback(async () => {
     if (!toneInitialized) {
@@ -291,17 +253,155 @@ const Scene = () => {
     setLastPlayedSample(currentSampler);
   }, [initializeTone, toneInitialized, availableChords]);
 
-  const bind = useGesture({
-    onPointerDown: () => {
-      setIsPointerDown(true);
+  const bind = useGesture(
+    {
+      // onPointerDown: () => {
+      //   console.log("onPointerDown");
+      //   setIsPointerDown(true);
+      // },
+      // onPointerUp: () => {
+      //   setIsPointerDown(false);
+      //   console.log("onPointerUp");
+      // },
+      onDrag: ({
+        movement: [x, y],
+        offset,
+        down,
+        xy,
+        moving,
+        first,
+        last,
+        initial,
+        touches,
+        tap,
+        lastOffset,
+      }) => {
+        // if(first || last || tap || touches > 1) {
+        //   return
+        // }
+        // console.log(lastOffset)
+
+        // if (first) {
+        //   console.log(
+        //     "FIRST",
+        //     "\n",
+        //     "offset y",
+        //     offset[1],
+        //     "\n",
+        //     "offset x",
+        //     offset[0]
+        //   );
+        // }
+
+        // if (first) {
+        //   console.log("FIRST", "\n", "y", y, "\n", "x", x);
+        // }
+
+        // if(!hasInitializedTouch) {
+        //   return
+        // }
+        // console.log("lastRotation before", lastRotation.current);
+        if (xy[0] > size.width / 2 && !isVerticalRight) {
+          lastRotation.current = lastRotation.current + y;
+          console.log("1 y", lastRotation.current + y);
+          setIsVerticalRight(true);
+        } else if (xy[0] < size.width / 2 && isVerticalRight) {
+          console.log("2 y", lastRotation.current - y);
+          lastRotation.current = lastRotation.current - y;
+          setIsVerticalRight(false);
+        }
+
+        if (xy[1] > size.height / 2 && isHorizontalBottom) {
+          console.log("3 x", lastRotation.current - x);
+          lastRotation.current = lastRotation.current - x;
+          setIsHorizontalBottom(false);
+        } else if (xy[1] < size.height / 2 && !isHorizontalBottom) {
+          console.log("4 x", lastRotation.current + x);
+          lastRotation.current = lastRotation.current + x;
+          setIsHorizontalBottom(true);
+        }
+
+        // if(first) {
+        //   return
+        // }
+
+        const posY = xy[0] > size.width / 2 ? -y : y;
+        const posX = xy[1] > size.height / 2 ? x : -x;
+        const rotZ = (posY + posX + lastRotation.current * 2) / aspect / 2;
+
+        // console.log("posY", posY);
+        // console.log("posX", posX);
+        // console.log("rotZ", rotZ);
+        // console.log("lastRotation after", lastRotation.current);
+
+        // if(first && rotation.isAnimating) {
+        //   return
+        // }
+        // console.log(groupRef.current!.rotation.z)
+        if (last) {
+          // lastRotation.current = 0
+          lastPosY.current = y;
+          lastPosX.current = x;
+          console.log(
+            "xy",
+            xy,
+            "\n",
+            "posY",
+            posY,
+            "\n",
+            "posX",
+            posX,
+            "\n",
+            "lastRotation",
+            lastRotation.current,
+            "\n",
+            "rotZ",
+            rotZ
+          );
+          setHasInitializedTouch(false);
+        }
+
+        setRotation.start({
+          rotation: [0, 0, rotZ],
+          // immediate: down,
+        });
+      },
     },
-    onPointerUp: () => {
-      setIsPointerDown(false);
-    },
-    onDrag: () => {
-      console.log("§12312123");
-    },
-  });
+    {
+      drag: {
+        // threshold: 20,
+        // filterTaps: true,
+        // useTouch: true,
+        bounds: {
+          bottom: (getSize(7) / 2) * aspect,
+          top: (-getSize(7) / 2) * aspect,
+          left: (-getSize(7) / 2) * aspect,
+          right: (getSize(7) / 2) * aspect,
+        },
+        initial: ({ initial, lastOffset }) => {
+          console.log("APA", lastOffset);
+          console.log(
+            "❌ INITIAL",
+            "\n",
+            "initial",
+            initial,
+            "\n",
+            "lastPosY",
+            lastPosY.current,
+            "\n",
+            "lastPosX",
+            lastPosX.current,
+            "\n",
+            "aspect",
+            aspect
+          );
+
+          setHasInitializedTouch(true);
+          return [lastPosX.current, lastPosY.current];
+        },
+      },
+    }
+  );
 
   const lightRef = useRef();
   useHelper(lightRef, PointLightHelper, 5, "red");
@@ -309,24 +409,51 @@ const Scene = () => {
   return (
     <>
       <color attach="background" args={[bgColor]} />
-      <OrbitControls />
-      <ambientLight intensity={1} />
-      {/* <pointLight ref={lightRef} position={[0, 0, -5]} args={["red", 10, 100]} /> */}
-      {/* <pointLight position={[10, 3, 5]} args={["white", 1]} />
-      <pointLight position={[-10, -3, 5]} args={["white", 1]} /> */}
-      {/* <pointLight position={[3, 10, 5]} args={["white", 0.5]} /> */}
+      <OrbitControls enabled={false} />
+      {/* <ambientLight intensity={1} /> */}
+      <pointLight
+        position={[getSize(10), getSize(3), getSize(5)]}
+        args={["#ffffff", 1]}
+      />
+      <pointLight
+        position={[getSize(-10), getSize(-3), getSize(5)]}
+        args={["#ffffff", 1]}
+      />
 
-      {/*
+      <a.group ref={outerGroupRef}>
+        {/*
       // @ts-ignore */}
-      <a.group ref={groupRef} {...bind()}>
-        <mesh>
-          <ringBufferGeometry
-            args={[getSize(2), getSize(7), RING_SEGMENTS, RING_SEGMENTS]}
-          />
-          <meshPhongMaterial color={discColor} />
-        </mesh>
+        <a.group ref={groupRef} rotation={rotation}>
+          {/* <a.group ref={groupRef} rotation={rotation} {...bind()}> */}
+          <mesh>
+            <ringBufferGeometry
+              args={[getSize(2), getSize(7), RING_SEGMENTS, RING_SEGMENTS]}
+            />
+            <meshPhongMaterial color={discColor} />
+          </mesh>
 
-        {rings.map((o, i) => {
+          {RING_INNER_RADIUS.map(
+            (radius, i) =>
+              i % 2 === 0 && (
+                <mesh key={i}>
+                  <ringBufferGeometry
+                    args={[
+                      getSize(radius),
+                      getSize(radius) + 0.05,
+                      RING_SEGMENTS,
+                      RING_SEGMENTS,
+                    ]}
+                  />
+                  <meshStandardMaterial
+                    color={"#000000"}
+                    opacity={0.05}
+                    transparent
+                  />
+                </mesh>
+              )
+          )}
+
+          {/* {rings.map((o, i) => {
           return (
             <mesh key={i}>
               <ringBufferGeometry
@@ -342,37 +469,43 @@ const Scene = () => {
               <meshStandardMaterial color={o.color} />
             </mesh>
           );
-        })}
+        })} */}
 
-        <mesh>
-          <ringBufferGeometry
-            args={[
-              getSize(0.3),
-              getSize(2),
-              RING_SEGMENTS,
-              RING_SEGMENTS,
-              0,
-              Math.PI,
-            ]}
-          />
-          <meshStandardMaterial color={centerColor} />
-        </mesh>
-        <mesh>
-          <ringBufferGeometry
-            args={[
-              getSize(0.3),
-              getSize(2),
-              RING_SEGMENTS,
-              RING_SEGMENTS,
-              Math.PI,
-              Math.PI,
-            ]}
-          />
-          <meshStandardMaterial color={centerColor2} />
-        </mesh>
+          <mesh>
+            <ringBufferGeometry
+              args={[
+                getSize(0.3),
+                getSize(2),
+                RING_SEGMENTS,
+                RING_SEGMENTS,
+                0,
+                Math.PI,
+              ]}
+            />
+            <meshStandardMaterial color={centerColor} />
+          </mesh>
+          <mesh>
+            <ringBufferGeometry
+              args={[
+                getSize(0.3),
+                getSize(2),
+                RING_SEGMENTS,
+                RING_SEGMENTS,
+                Math.PI,
+                Math.PI,
+              ]}
+            />
+            <meshStandardMaterial color={centerColor2} />
+          </mesh>
+        </a.group>
       </a.group>
+      {/* <EffectComposer>
+        <GodRaysEffect innerRadius={getSize(7)} outerRadius={getSize(7.1)} />
+      </EffectComposer> */}
     </>
   );
 };
+
+gsap.registerPlugin(Draggable, InertiaPlugin);
 
 export default Scene;

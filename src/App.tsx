@@ -3,6 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import Scene from "./Scene";
 import { Vector3 } from "three";
 import { Sampler } from "tone";
+import DiscElement from "./DiscElement";
 
 export interface Sample {
   index: number;
@@ -86,15 +87,20 @@ export const CHORDS: Sample[] = [
   },
 ];
 
-const App = () => (
-  <Canvas
-    dpr={window.devicePixelRatio}
-    camera={{ position: new Vector3(0, 0, 10) }}
-  >
-    <Suspense fallback={null}>
-      <Scene />
-    </Suspense>
-  </Canvas>
-);
+const App = () => {
+  return (
+    <>
+      <Canvas
+        dpr={window.devicePixelRatio}
+        camera={{ position: new Vector3(0, 0, 10) }}
+      >
+        <Suspense fallback={null}>
+          <Scene />
+        </Suspense>
+      </Canvas>
+      <DiscElement />
+    </>
+  );
+};
 
 export default App;
