@@ -52,7 +52,7 @@ export const THETA_LENGTH = [
   Math.PI * 2,
 ];
 
-export const RING_COUNT = [10, 15];
+export const RING_COUNT = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
 export const RING_WIDTH = [0.05, 0.05, 0.05, 0.05, 0.1, 0.1, 0.15];
 
@@ -63,6 +63,33 @@ export const RING_INNER_RADIUS = [
 
 export const RING_STATIC_RADIUS = [
   2.25, 2.5, 2.75, 3, 3.25, 3.5, 3.75, 4, 4.5, 5, 5.5, 6, 6.25, 6.5, 6.75,
+];
+
+export const POINT_LIGHTS = [
+  [
+    [10, 7.5, 5],
+    [-10, -7.5, 5],
+  ],
+  [
+    [10, -7.5, 5],
+    [-10, 7.5, 5],
+  ],
+  [
+    [10, 7.5, 5],
+    [-10, -7.5, 5],
+  ],
+  [
+    [10, -7.5, 5],
+    [-10, 7.5, 5],
+  ],
+  [
+    [10, 0, 5],
+    [-10, 0, 5],
+  ],
+  [
+    [0, -10, 5],
+    [0, 10, 5],
+  ],
 ];
 
 export const BG_COLORS = [
@@ -83,19 +110,48 @@ export const DISC_COLORS = [
   },
   {
     theme: "light",
-    colors: ["#000000", "#eb3434", "#fe7418"],
+    colors: ["#000000", "#eb3434", "#eb3434", "#fe7418", "#fe7418"],
   },
 ];
+
+// export const RING_COLORS = [
+//   {
+//     theme: "dark",
+//     colors: [
+//       "#000000",
+//       "#004451",
+//       "#111033",
+//       "#800b0b",
+//       "#053d08",
+//       "#dc0fc0",
+//       "#aa4807",
+//       "#75007e",
+//     ],
+//   },
+//   {
+//     theme: "light",
+//     colors: [
+//       "#ffffff",
+//       "#ffd600",
+//       "#497fff",
+//       "#eb3434",
+//       "#30f8a0",
+//       "#ff6aeb",
+//       "#fe7418",
+//       "#00f7fb",
+//     ],
+//   },
+// ];
 
 export const RING_COLORS = [
   {
     theme: "dark",
     colors: [
       "#000000",
-      "#004451",
-      "#111033",
+      "#1b3342",
+      "#0b0b4b",
       "#800b0b",
-      "#053d08",
+      "#1b4225",
       "#dc0fc0",
       "#aa4807",
       "#75007e",
@@ -105,13 +161,32 @@ export const RING_COLORS = [
     theme: "light",
     colors: [
       "#ffffff",
-      "#ffd600",
+      "#ffce00",
       "#497fff",
       "#eb3434",
       "#30f8a0",
-      "#ff6aeb",
+      "#f97b9c",
       "#fe7418",
       "#00f7fb",
     ],
   },
+];
+
+export const RING_COLORS_ALL = [
+  "#000000",
+  "#1b3342",
+  "#0b0b4b",
+  "#800b0b",
+  "#1b4225",
+  "#dc0fc0",
+  "#aa4807",
+  "#75007e",
+  "#ffffff",
+  "#ffce00",
+  "#497fff",
+  "#eb3434",
+  "#30f8a0",
+  "#f97b9c",
+  "#fe7418",
+  "#00f7fb",
 ];
