@@ -1,4 +1,10 @@
-import { OrbitControls, Text, useHelper } from "@react-three/drei";
+import {
+  GradientTexture,
+  OrbitControls,
+  Text,
+  useHelper,
+  useTexture,
+} from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import {
   useCallback,
@@ -9,13 +15,7 @@ import {
   useState,
 } from "react";
 import { a, useSpring } from "@react-spring/three";
-import {
-  MathUtils,
-  Mesh,
-  MeshStandardMaterial,
-  PointLightHelper,
-  Vector3,
-} from "three";
+import { MathUtils, Mesh, MeshStandardMaterial, Vector3 } from "three";
 import { start, Transport } from "tone";
 import { Sample, VINYL_NOISE, BEAT } from "./App";
 import { EffectComposer } from "@react-three/postprocessing";
@@ -32,12 +32,12 @@ import {
   RING_COLORS_ALL,
   POINT_LIGHTS,
   RING_STATIC_RADIUS,
+  RING_SEGMENTS,
 } from "./constants";
 import { Draggable } from "gsap/Draggable";
 import gsap from "gsap";
 import Needle from "./Needle";
 const Momentum = require("./momentum");
-const debounce = require("lodash.debounce");
 
 declare const fxrand: () => number;
 
@@ -51,8 +51,6 @@ const sortRandomHash = <T,>(array: T[]) => array.sort((a, b) => 0.5 - fxrand());
 
 const pickRandomHash = <T,>(array: T[]) =>
   array[Math.floor(fxrand() * array.length)];
-
-const RING_SEGMENTS = 64;
 
 interface Ring {
   width: number;
@@ -69,10 +67,9 @@ const pointLights = pickRandomHash(sortRandom(POINT_LIGHTS));
 
 const bgTheme = pickRandomHash(BG_COLORS);
 const discTheme = bgTheme.theme === "light" ? DISC_COLORS[0] : DISC_COLORS[1];
-const needleTheme =
-  discTheme.theme === "light" ? RING_COLORS[1] : RING_COLORS[0];
 const centerTheme =
   discTheme.theme === "light" ? RING_COLORS[0] : RING_COLORS[1];
+const needleTheme = bgTheme.theme === "light" ? BG_COLORS[0] : BG_COLORS[1];
 
 const bgColor = pickRandomHash(bgTheme.colors);
 const discColor = pickRandomHash(discTheme.colors);
@@ -82,8 +79,10 @@ const centerColor = pickRandomHash(
 const centerColor2 = pickRandomHash(
   centerTheme.colors.filter((color) => color !== discColor && color !== bgColor)
 );
-const needleColor = pickRandomHash(discTheme.colors);
-// console.log(bgColor, discColor, centerColor, centerColor2);
+const needleColor = pickRandomHash(
+  needleTheme.colors.filter((color) => color !== discColor && color !== bgColor)
+);
+
 const ringCount = pickRandomHash(RING_COUNT);
 const rings = new Array(ringCount).fill(null).map<Ring>(() => {
   const width = pickRandomHash(RING_WIDTH);
@@ -119,10 +118,17 @@ export const getSizeByAspect = (size: number, aspect: number) =>
   aspect > 1 ? size : size * aspect;
 
 const StaticRings = ({ aspect }: { aspect: number }) => {
+  const color =
+    discColor === "#000000"
+      ? "#000000"
+      : discTheme.theme === "light"
+      ? "#ffffff"
+      : "#000000";
+
   const material = new MeshStandardMaterial({
-    color: "#000000",
-    opacity: 0.05,
-    transparent: true,
+    color,
+    // opacity: 0.05,
+    // transparent: true,
   });
   const radiuses = useMemo(
     () => RING_STATIC_RADIUS.filter((o, i) => i % 2 !== 0),
@@ -136,7 +142,7 @@ const StaticRings = ({ aspect }: { aspect: number }) => {
           <ringBufferGeometry
             args={[
               getSizeByAspect(radius, aspect),
-              getSizeByAspect(radius, aspect) + 0.05,
+              getSizeByAspect(radius, aspect) + getSizeByAspect(0.01, aspect),
               RING_SEGMENTS,
               RING_SEGMENTS,
               0,
@@ -149,53 +155,28 @@ const StaticRings = ({ aspect }: { aspect: number }) => {
   );
 };
 
-// const StaticRings = ({ aspect }: { aspect: number }) => {
-//   const mesh = useRef<InstancedMesh>();
-//   const object = new Object3D();
-//   const geometry = useMemo(() => new RingBufferGeometry(), []);
-//   const instancedGeometry = new InstancedBufferGeometry()
-
-//   const material = new MeshStandardMaterial({
-//     color: "#000000",
-//     opacity: 0.05,
-//     transparent: true,
-//   });
-//   const radiuses = useMemo(
-//     () => RING_INNER_RADIUS.filter((o, i) => i % 2 !== 0),
-//     []
-//   );
-
-//   instancedGeometry.instanceCount = radiuses.length
-
-//   useLayoutEffect(() => {
-//     radiuses.forEach((radius) => {
-//       geometry.parameters = {
-//         innerRadius: getSizeByAspect(radius, aspect),
-//         outerRadius: getSizeByAspect(radius, aspect) + 0.05,
-//         thetaSegments: RING_SEGMENTS,
-//         phiSegments: RING_SEGMENTS,
-//         thetaStart: 0,
-//         thetaLength: Math.PI * 2,
-//       };
-
-//       console.log("2", geometry);
-//       // geometry.setAttribute( 'position', new BufferAttribute( vertices, 3 ) );
-//     });
-//   }, [radiuses, geometry, aspect]);
-
-//   return (
-//     <instancedMesh
-//       ref={mesh}
-//       args={[undefined, undefined, radiuses.length]}
-//       material={material}
-//       // geometry={geometry.current}
-//     >
-//       {/* <ringBufferGeometry args={[20, 20 + 1, RING_SEGMENTS, RING_SEGMENTS]}>
-//       <instancedBufferAttribute />
-//       </ringBufferGeometry> */}
-//     </instancedMesh>
-//   );
-// };
+const DynamicRings = ({ aspect }: { aspect: number }) => {
+  return (
+    <>
+      {rings.map((ring, i) => (
+        <mesh key={i}>
+          <ringBufferGeometry
+            args={[
+              getSizeByAspect(ring.innerRadius, aspect),
+              getSizeByAspect(ring.innerRadius, aspect) +
+                getSizeByAspect(ring.width, aspect),
+              RING_SEGMENTS,
+              RING_SEGMENTS,
+              ring.thetaStart,
+              ring.thetaLength,
+            ]}
+          />
+          <meshStandardMaterial color={ring.color} />
+        </mesh>
+      ))}
+    </>
+  );
+};
 
 function isTouchDevice() {
   return (
@@ -217,10 +198,8 @@ const Scene = () => {
   const [isDragging, setIsDragging] = useState(false);
   const toneInitialized = useRef(false);
   const [audioActive, setAudioActive] = useState(false);
-  // const audioActive = useRef(false);
 
   let text = useRef("");
-  let text2 = useRef("");
 
   Transport.timeSignature = [4, 4];
   Transport.bpm.value = 135;
@@ -235,11 +214,8 @@ const Scene = () => {
 
     await start();
     toneInitialized.current = true;
-    console.log("tone initialized");
-    // text.current = "tone initialized";
+
     setTimeout(() => {
-      console.log("is playing true");
-      // text.current = "tis playing true";
       setAudioActive(true);
     }, 1000);
   }, []);
@@ -278,21 +254,6 @@ const Scene = () => {
     BEAT.toDestination().sync();
   }, []);
 
-  // useEffect(() => {
-  //   if (hasInitialInteraction && !toneInitialized) {
-  //     initializeTone();
-  //   }
-  // }, [hasInitialInteraction, toneInitialized, initializeTone]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  // const updatePlaybackRate = useCallback(
-  //   debounce((interpolatedRate: number) => {
-  //     BEAT.playbackRate = Math.round(interpolatedRate * 100) / 100;
-  //     console.log(Math.round(interpolatedRate * 100) / 100);
-  //   }, 1),
-  //   []
-  // );
-
   const onRotation = useCallback(() => {
     if (!groupRef.current || !draggableRef.current) {
       return;
@@ -313,18 +274,11 @@ const Scene = () => {
 
   const onRelease = useCallback(() => {
     setIsDragging(false);
-    // text.current = "onrelease";
   }, []);
 
-  const onPress = useCallback(async () => {
-    // setHasInitialInteraction(true);
-    console.log("onpress");
-    await initializeTone();
-
-    isTouchDevice();
-
+  const onPress = useCallback(() => {
+    initializeTone();
     setIsDragging(true);
-    // text.current = "onpress";
   }, [initializeTone]);
 
   useEffect(() => {
@@ -332,7 +286,6 @@ const Scene = () => {
       return;
     }
 
-    console.log("123123");
     if (isDragging) {
       if (VINYL_NOISE.state === "started") {
         VINYL_NOISE.volume.value = -999;
@@ -345,8 +298,6 @@ const Scene = () => {
         VINYL_NOISE.start("+0.1");
 
         startTransport();
-
-        console.log("vinyl started");
       }
     }
   }, [isDragging, audioActive, startTransport]);
@@ -355,13 +306,7 @@ const Scene = () => {
     draggableRef.current = new Draggable("#disc", {
       type: "rotation",
       onDrag: onRotation,
-      // onMove: onRotation,
-      // onDragEnd: () => { text.current = "A"},
-      // onDragStart,
-      // onDragEnd: () => updateTransport(),
       onThrowUpdate: onRotation,
-      // onThrowComplete: () => updateTransport(),
-      // onPressInit: onPress as () => void,
       onRelease,
       onPress: onPress as () => void,
       trigger: "#disc",
@@ -376,16 +321,19 @@ const Scene = () => {
     [aspect]
   );
 
-  const lightRef = useRef();
-  useHelper(lightRef, PointLightHelper, 5, "red");
+  // const lightRef = useRef();
+  // useHelper(lightRef, PointLightHelper, 5, "red");
+
+  const texture = useTexture(
+    `${process.env.PUBLIC_URL}/texture/grain-texture.jpeg`
+  );
 
   return (
     <>
       <color attach="background" args={[bgColor]} />
       <OrbitControls />
-      {/* <ambientLight intensity={1} /> */}
+
       <pointLight
-        ref={lightRef}
         position={pointLights[0].map((o) => getSize(o)) as unknown as Vector3}
         args={["#ffffff", 1]}
       />
@@ -400,28 +348,18 @@ const Scene = () => {
             <ringBufferGeometry
               args={[getSize(2), getSize(7), RING_SEGMENTS, RING_SEGMENTS]}
             />
-            <meshPhongMaterial color={discColor} />
+            <meshPhongMaterial color={discColor}>
+              {/* <GradientTexture
+                stops={[0, 1]}
+                colors={[discColor, discColor2]}
+                size={1024}
+              /> */}
+            </meshPhongMaterial>
           </mesh>
 
           {/* <StaticRings aspect={aspect} /> */}
 
-          {/*{rings.map((o, i) => {
-            return (
-              <mesh key={i}>
-                <ringBufferGeometry
-                  args={[
-                    getSize(o.innerRadius),
-                    getSize(o.innerRadius) + o.width,
-                    RING_SEGMENTS,
-                    RING_SEGMENTS,
-                    o.thetaStart,
-                    o.thetaLength,
-                  ]}
-                />
-                <meshStandardMaterial color={o.color} />
-              </mesh>
-            );
-          })} */}
+          <DynamicRings aspect={aspect} />
 
           <mesh>
             <ringBufferGeometry
@@ -455,16 +393,18 @@ const Scene = () => {
         getSize={getSize}
         isActive={toneInitialized.current}
         color={needleColor}
+        secondColor={bgColor}
       />
-      <Text color="black" anchorX="center" anchorY="middle" fontSize={3}>
+      {/* <Text color="black" anchorX="center" anchorY="middle" fontSize={3}>
         {text.current}
-      </Text>
-      {/* 
-      <Text color="black" anchorX="left" anchorY="middle" fontSize={3}>
-        {text2.current}
       </Text> */}
+
       {/* <EffectComposer>
-        <GodRaysEffect innerRadius={getSize(7)} outerRadius={getSize(7.1)} />
+        <GodRaysEffect
+          aspect={aspect}
+          innerRadius={getSize(7)}
+          outerRadius={getSize(7.1)}
+        />
       </EffectComposer> */}
     </>
   );

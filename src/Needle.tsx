@@ -1,36 +1,20 @@
 import { a, easings, useSpring } from "@react-spring/three";
-import { RoundedBox } from "@react-three/drei";
+import { useTexture } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
-import { CatmullRomCurve3, Color, Vector3 } from "three";
-
-const convertToRGB = (hex: string) => {
-  const aRgbHex = hex.match(/.{1,2}/g);
-
-  if (!aRgbHex) {
-    return "#ffffff";
-  }
-
-  const aRgb = [
-    parseInt(aRgbHex[0], 16),
-    parseInt(aRgbHex[1], 16),
-    parseInt(aRgbHex[2], 16),
-  ];
-  return aRgb;
-};
+import { CatmullRomCurve3, Vector3 } from "three";
+import { RING_SEGMENTS } from "./constants";
 
 const Needle = ({
   isActive,
   getSize,
   color,
+  secondColor,
 }: {
   isActive: boolean;
   getSize: (size: number) => number;
   color: string;
+  secondColor: string;
 }) => {
-  const lidColor = useMemo(
-    () => new Color(color).lerp(new Color("#ffffff"), 0.00001),
-    [color]
-  );
   const [{ rotation }, setRotation] = useSpring(() => ({
     rotation: [0, 0, 0.6],
     config: { duration: 1000, easing: easings.easeInOutCubic },
@@ -43,7 +27,6 @@ const Needle = ({
   }, [isActive, setRotation]);
 
   const curve = useMemo(
-    // () => new CatmullRomCurve3([new Vector3(1, 1, 0.5), new Vector3(1, -2, 0.5), new Vector3(0, -3, 0.5)]),
     () =>
       new CatmullRomCurve3(
         [
@@ -61,23 +44,26 @@ const Needle = ({
   return (
     <a.group position={[getSize(4.9), getSize(6.5), 0]} rotation={rotation}>
       <mesh>
-        <circleBufferGeometry args={[getSize(0.5), 64, 64]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      <mesh position={[getSize(-0.05), getSize(-0.03), getSize(0.1)]}>
-        <circleBufferGeometry args={[getSize(0.2), 64, 64]} />
-        <meshStandardMaterial color={lidColor} />
-      </mesh>
-      <RoundedBox
-        position={[getSize(-0.3), getSize(-4.5), 0]}
-        rotation={[1.5, -0.6, 0]}
-        args={[getSize(0.35), getSize(0.2), getSize(0.95)]}
-        radius={0.05}
-      >
+        <circleBufferGeometry
+          args={[getSize(0.4), RING_SEGMENTS, RING_SEGMENTS]}
+        />
         <meshBasicMaterial color={color} />
-      </RoundedBox>
+      </mesh>
+      <mesh position={[getSize(-0.05), getSize(-0.03), getSize(0.08)]}>
+        <circleBufferGeometry
+          args={[getSize(0.15), RING_SEGMENTS, RING_SEGMENTS]}
+        />
+        <meshBasicMaterial color={secondColor} />
+      </mesh>
+      <mesh
+        position={[getSize(-0.325), getSize(-4.5), 0]}
+        rotation={[0, 0, -0.6]}
+      >
+        <planeBufferGeometry args={[getSize(0.35), getSize(0.8)]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
       <mesh position={[getSize(-1), getSize(-1), 0]}>
-        <tubeBufferGeometry args={[curve, 70, getSize(0.08), 10]} />
+        <tubeBufferGeometry args={[curve, 70, getSize(0.08), 4]} />
         <meshBasicMaterial color={color} />
       </mesh>
     </a.group>

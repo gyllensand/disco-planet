@@ -7,27 +7,24 @@ import { Mesh } from "three";
 interface Props {
   innerRadius: number;
   outerRadius: number;
+  aspect: number;
 }
 
 const Sun = forwardRef<Mesh, Props>((props, forwardRef) => {
   return (
     <mesh ref={forwardRef as any} position={[0, 0, 0]}>
-      <sphereGeometry args={[1, 32, 32]} />
+      <circleBufferGeometry args={[0.1, 32, 32]} />
       <meshBasicMaterial color="yellow" />
     </mesh>
   );
 });
 
-const GodRaysEffect = ({ innerRadius, outerRadius }: Props) => {
+const GodRaysEffect = (props: Props) => {
   const sunRef = useRef<THREE.Mesh>();
 
   return (
     <>
-      <Sun
-        ref={sunRef as any}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-      />
+      <Sun ref={sunRef as any} {...props} />
       {sunRef.current && (
         <GodRays
           sun={sunRef.current}
