@@ -1,9 +1,14 @@
-import { Suspense } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import Scene from "./Scene";
 import { Vector3 } from "three";
-import { Loop, Player, Sampler } from "tone";
+import { Loop, Player, Sampler, start } from "tone";
 import DiscElement from "./DiscElement";
+
+console.log(
+  "%c * Computer Emotions * ",
+  "color: #d80fe7; font-size: 16px; background-color: #000000;"
+);
 
 export interface Sample {
   index: number;
@@ -29,7 +34,7 @@ export const VINYL_NOISE = new Player({
 });
 
 export const BEAT = new Player({
-  url: `${baseUrl}pad.mp3`,
+  url: `${baseUrl}drums.mp3`,
 });
 
 // export const AUDIO = [

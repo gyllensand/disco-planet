@@ -30,6 +30,7 @@ const Disc = () => {
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
+        pointerEvents: "none",
       }}
     >
       <div
@@ -37,13 +38,30 @@ const Disc = () => {
         style={{
           height: getSize(windowSize[1] - getSize(20)),
           width: getSize(windowSize[1] - getSize(20)),
-        //   borderWidth: 2,
-        //   borderColor: "red",
-        //   borderStyle: "double",
+          //   borderWidth: 5,
+          //   borderColor: "red",
+          //   borderStyle: "double",
+          pointerEvents: "auto",
           borderRadius: "50%",
-          zIndex: 99,
+          zIndex: 1,
         }}
       ></div>
+      {/* {!isToneInit && (
+        <div
+          onClick={onStart}
+          style={{
+            position: "absolute",
+            height: getSize(windowSize[1] - getSize(20)),
+            width: getSize(windowSize[1] - getSize(20)),
+            borderWidth: 10,
+            borderColor: "green",
+            borderStyle: "double",
+            pointerEvents: "auto",
+            borderRadius: "50%",
+            zIndex: 2,
+          }}
+        ></div>
+      )} */}
     </div>
   );
 };

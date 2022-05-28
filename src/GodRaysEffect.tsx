@@ -12,7 +12,7 @@ interface Props {
 const Sun = forwardRef<Mesh, Props>((props, forwardRef) => {
   return (
     <mesh ref={forwardRef as any} position={[0, 0, 0]}>
-      <ringGeometry args={[props.innerRadius, props.outerRadius, 128, 128]} />
+      <sphereGeometry args={[1, 32, 32]} />
       <meshBasicMaterial color="yellow" />
     </mesh>
   );
