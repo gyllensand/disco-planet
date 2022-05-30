@@ -4,6 +4,7 @@ import Scene from "./Scene";
 import { Vector3 } from "three";
 import { Loop, Player, Sampler, start } from "tone";
 import DiscElement from "./DiscElement";
+import AudioEnergy from "./AudioEnergy";
 
 console.log(
   "%c * Computer Emotions * ",
@@ -17,42 +18,85 @@ export interface Sample {
 
 const baseUrl = `${process.env.PUBLIC_URL}/audio/`;
 
-// export const CHORDS: Sample[] = [
-//   {
-//     index: 0,
-//     sampler: new Sampler({
-//       urls: {
-//         1: "chord_1.mp3",
-//       },
-//       baseUrl,
-//     }),
-//   },
-// ];
+export const SCRATCH: Sample[] = [
+  {
+    index: 0,
+    sampler: new Sampler({
+      urls: {
+        1: "scratch-short-1.mp3",
+      },
+      baseUrl,
+    }),
+  },
+  {
+    index: 0,
+    sampler: new Sampler({
+      urls: {
+        1: "scratch-short-2.mp3",
+      },
+      baseUrl,
+    }),
+  },
+  {
+    index: 0,
+    sampler: new Sampler({
+      urls: {
+        1: "scratch-short-3.mp3",
+      },
+      baseUrl,
+    }),
+  },
+  {
+    index: 0,
+    sampler: new Sampler({
+      urls: {
+        1: "scratch-short-4.mp3",
+      },
+      baseUrl,
+    }),
+  },
+  {
+    index: 0,
+    sampler: new Sampler({
+      urls: {
+        1: "scratch-short-5.mp3",
+      },
+      baseUrl,
+    }),
+  },
+  {
+    index: 0,
+    sampler: new Sampler({
+      urls: {
+        1: "scratch-short-6.mp3",
+      },
+      baseUrl,
+    }),
+  },
+  {
+    index: 0,
+    sampler: new Sampler({
+      urls: {
+        1: "scratch-short-1.mp3",
+      },
+      baseUrl,
+    }),
+  },
+];
 
 export const VINYL_NOISE = new Player({
   url: `${baseUrl}vinyl-noise.mp3`,
 });
 
-export const BEAT = new Player({
+export const DRUMS = new Player({
   url: `${baseUrl}drums.mp3`,
 });
 
-// export const AUDIO = [
-//   {
-//     index: 0,
-//     name: "vinylNoise",
-//     player: new Player({
-//       url: `${baseUrl}vinyl-noise.mp3`,
-//     }),
-//   },
-//   {
-//     index: 1,
-//     name: "beat",
-//     player: new Player({
-//       url: `${baseUrl}pad.mp3`,
-//     }),
-//   },
-// ];
+export const INSTRUMENTS = new Player({
+  url: `${baseUrl}instruments.mp3`,
+});
+
+export const analyser = new AudioEnergy();
 
 const App = () => {
   return (

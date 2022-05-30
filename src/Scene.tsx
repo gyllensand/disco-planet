@@ -1,25 +1,15 @@
-import {
-  GradientTexture,
-  OrbitControls,
-  Text,
-  useHelper,
-  useTexture,
-} from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { a, useSpring } from "@react-spring/three";
-import { MathUtils, Mesh, MeshStandardMaterial, Vector3 } from "three";
+  MathUtils,
+  Mesh,
+  MeshStandardMaterial,
+  PointLight,
+  Vector3,
+} from "three";
 import { start, Transport } from "tone";
-import { Sample, VINYL_NOISE, BEAT } from "./App";
-import { EffectComposer } from "@react-three/postprocessing";
-import GodRaysEffect from "./GodRaysEffect";
+import { VINYL_NOISE, analyser, INSTRUMENTS, DRUMS } from "./App";
 import {
   RING_COUNT,
   RING_WIDTH,
@@ -37,6 +27,7 @@ import {
 import { Draggable } from "gsap/Draggable";
 import gsap from "gsap";
 import Needle from "./Needle";
+import { a, useSpring } from "@react-spring/three";
 const Momentum = require("./momentum");
 
 declare const fxrand: () => number;
@@ -63,7 +54,7 @@ interface Ring {
 const range = (x1: number, y1: number, x2: number, y2: number, a: number) =>
   MathUtils.lerp(x2, y2, MathUtils.inverseLerp(x1, y1, a));
 
-const pointLights = pickRandomHash(sortRandom(POINT_LIGHTS));
+const pointLights = pickRandomHash(sortRandomHash(POINT_LIGHTS));
 
 const bgTheme = pickRandomHash(BG_COLORS);
 const discTheme = bgTheme.theme === "light" ? DISC_COLORS[0] : DISC_COLORS[1];
@@ -104,32 +95,38 @@ const rings = new Array(ringCount).fill(null).map<Ring>(() => {
 window.$fxhashFeatures = {
   ringCount,
   rings,
-  // pitch,
-  // pattern,
-  // scale,
-  // blur,
-  // time,
-  // bgColor: bgColor.getHexString(),
-  // lineColor1: lineColor1.getHexString(),
-  // lineColor2: lineColor2.getHexString(),
+  bgColor: BG_COLORS.map((o) => o.colors),
+  discColor: DISC_COLORS.map((o) => o.colors),
+  ringColors: RING_COLORS_ALL,
+  needleColor: BG_COLORS.map((o) => o.colors),
+  pointLightsPosition: POINT_LIGHTS,
 };
 
 export const getSizeByAspect = (size: number, aspect: number) =>
   aspect > 1 ? size : size * aspect;
 
+const adjustColor = (color: string, amount: number) => {
+  return (
+    "#" +
+    color
+      .replace(/^#/, "")
+      .replace(/../g, (color) =>
+        (
+          "0" +
+          Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)
+        ).substr(-2)
+      )
+  );
+};
+
 const StaticRings = ({ aspect }: { aspect: number }) => {
   const color =
-    discColor === "#000000"
-      ? "#000000"
-      : discTheme.theme === "light"
-      ? "#ffffff"
-      : "#000000";
+    discColor === "#000000" ? "#000000" : adjustColor(discColor, -50);
 
   const material = new MeshStandardMaterial({
     color,
-    // opacity: 0.05,
-    // transparent: true,
   });
+
   const radiuses = useMemo(
     () => RING_STATIC_RADIUS.filter((o, i) => i % 2 !== 0),
     []
@@ -178,34 +175,28 @@ const DynamicRings = ({ aspect }: { aspect: number }) => {
   );
 };
 
-function isTouchDevice() {
-  return (
-    "ontouchstart" in window ||
-    navigator.maxTouchPoints > 0 ||
-    // @ts-ignore
-    navigator.msMaxTouchPoints > 0
-  );
-}
-
 const Scene = () => {
   const { aspect } = useThree((state) => ({
     aspect: state.viewport.aspect,
   }));
   const outerGroupRef = useRef<Mesh>();
   const groupRef = useRef<Mesh>();
+  const innerGroupRef = useRef<Mesh>();
+  const pointLightRef = useRef<PointLight>();
+  const pointLightRef2 = useRef<PointLight>();
   const draggableRef = useRef<Draggable>();
 
   const [isDragging, setIsDragging] = useState(false);
   const toneInitialized = useRef(false);
   const [audioActive, setAudioActive] = useState(false);
 
-  let text = useRef("");
-
   Transport.timeSignature = [4, 4];
-  Transport.bpm.value = 135;
-  Transport.loop = true;
-  Transport.loopStart = 0;
-  Transport.loopEnd = "8m";
+  Transport.bpm.value = 110;
+
+  const [{ scale }, setScale] = useSpring(() => ({
+    scale: 0,
+    config: { friction: 20 },
+  }));
 
   const initializeTone = useCallback(async () => {
     if (toneInitialized.current) {
@@ -222,24 +213,16 @@ const Scene = () => {
 
   const startTransport = useCallback(() => {
     if (Transport.state === "stopped") {
-      console.log("start transport");
       Transport.start("+2");
-      BEAT.volume.value = -10;
-      BEAT.start(0);
-    }
-  }, []);
+      Transport.scheduleOnce(() => {
+        INSTRUMENTS.setLoopPoints("8m", "16m");
+        INSTRUMENTS.loop = true;
+        DRUMS.setLoopPoints("8m", "16m");
+        DRUMS.loop = true;
+      }, "+1");
 
-  const resumeTransport = useCallback(() => {
-    if (Transport.state === "paused") {
-      console.log("resume transport");
-      Transport.start("+0.1");
-    }
-  }, []);
-
-  const stopTransport = useCallback(() => {
-    if (Transport.state === "started") {
-      console.log("stop transport");
-      Transport.stop(0);
+      DRUMS.start(0);
+      INSTRUMENTS.start(0);
     }
   }, []);
 
@@ -247,11 +230,30 @@ const Scene = () => {
     if (!isDragging) {
       outerGroupRef.current!.rotation.z -= 0.025;
     }
+
+    analyser.update();
+    const clamp = (energy: number, threshold: number) =>
+      isFinite(energy) && energy > threshold ? energy : threshold;
+
+    const bassEnergy = analyser.getEnergy().byFrequency("bass");
+    const trebleEnergy = analyser.getEnergy().byFrequency("highMid");
+
+    const centerEnergy = analyser._map(bassEnergy, -100, -50, 1, 1.05);
+    const centerValue = clamp(centerEnergy, 1);
+
+    const lightEnergy = analyser._map(trebleEnergy, -100, -50, 0.5, 1);
+    const lightValue = clamp(lightEnergy, 0.5);
+
+    // pointLightRef.current!.intensity = lightValue;
+    // pointLightRef2.current!.intensity = lightValue;
+    innerGroupRef.current!.scale.set(centerValue, centerValue, centerValue);
   });
 
   useEffect(() => {
     VINYL_NOISE.toDestination();
-    BEAT.toDestination().sync();
+    INSTRUMENTS.toDestination().sync();
+    DRUMS.toDestination().sync();
+    DRUMS.connect(analyser);
   }, []);
 
   const onRotation = useCallback(() => {
@@ -265,8 +267,11 @@ const Scene = () => {
       2
     );
 
+    const playbackRate = Math.round(interpolatedRate * 100) / 100;
+
     if (Transport.state === "started") {
-      BEAT.playbackRate = Math.round(interpolatedRate * 100) / 100;
+      INSTRUMENTS.playbackRate = playbackRate;
+      DRUMS.playbackRate = playbackRate;
     }
 
     groupRef.current.rotation.z = -draggableRef.current.rotation / 50;
@@ -321,26 +326,25 @@ const Scene = () => {
     [aspect]
   );
 
-  // const lightRef = useRef();
-  // useHelper(lightRef, PointLightHelper, 5, "red");
-
-  const texture = useTexture(
-    `${process.env.PUBLIC_URL}/texture/grain-texture.jpeg`
-  );
-
   return (
     <>
       <color attach="background" args={[bgColor]} />
-      <OrbitControls />
+      <OrbitControls enabled={false} />
 
       <pointLight
+        ref={pointLightRef}
         position={pointLights[0].map((o) => getSize(o)) as unknown as Vector3}
         args={["#ffffff", 1]}
       />
       <pointLight
+        ref={pointLightRef2}
         position={pointLights[1].map((o) => getSize(o)) as unknown as Vector3}
         args={["#ffffff", 1]}
       />
+
+      {/*
+      // @ts-ignore */}
+      {/* <pointLight ref={pointLightRef} position={[0, 0, 5]} args={["red", 0]} /> */}
 
       <group ref={outerGroupRef}>
         <group ref={groupRef}>
@@ -348,45 +352,40 @@ const Scene = () => {
             <ringBufferGeometry
               args={[getSize(2), getSize(7), RING_SEGMENTS, RING_SEGMENTS]}
             />
-            <meshPhongMaterial color={discColor}>
-              {/* <GradientTexture
-                stops={[0, 1]}
-                colors={[discColor, discColor2]}
-                size={1024}
-              /> */}
-            </meshPhongMaterial>
+            <meshPhongMaterial color={discColor} />
           </mesh>
 
-          {/* <StaticRings aspect={aspect} /> */}
-
+          <StaticRings aspect={aspect} />
           <DynamicRings aspect={aspect} />
 
-          <mesh>
-            <ringBufferGeometry
-              args={[
-                getSize(0.3),
-                getSize(2),
-                RING_SEGMENTS,
-                RING_SEGMENTS,
-                0,
-                Math.PI,
-              ]}
-            />
-            <meshStandardMaterial color={centerColor} />
-          </mesh>
-          <mesh>
-            <ringBufferGeometry
-              args={[
-                getSize(0.3),
-                getSize(2),
-                RING_SEGMENTS,
-                RING_SEGMENTS,
-                Math.PI,
-                Math.PI,
-              ]}
-            />
-            <meshStandardMaterial color={centerColor2} />
-          </mesh>
+          <a.group ref={innerGroupRef}>
+            <mesh>
+              <ringBufferGeometry
+                args={[
+                  getSize(0.3),
+                  getSize(2),
+                  RING_SEGMENTS,
+                  RING_SEGMENTS,
+                  0,
+                  Math.PI,
+                ]}
+              />
+              <meshStandardMaterial color={centerColor} />
+            </mesh>
+            <mesh>
+              <ringBufferGeometry
+                args={[
+                  getSize(0.3),
+                  getSize(2),
+                  RING_SEGMENTS,
+                  RING_SEGMENTS,
+                  Math.PI,
+                  Math.PI,
+                ]}
+              />
+              <meshStandardMaterial color={centerColor2} />
+            </mesh>
+          </a.group>
         </group>
       </group>
       <Needle
@@ -395,17 +394,6 @@ const Scene = () => {
         color={needleColor}
         secondColor={bgColor}
       />
-      {/* <Text color="black" anchorX="center" anchorY="middle" fontSize={3}>
-        {text.current}
-      </Text> */}
-
-      {/* <EffectComposer>
-        <GodRaysEffect
-          aspect={aspect}
-          innerRadius={getSize(7)}
-          outerRadius={getSize(7.1)}
-        />
-      </EffectComposer> */}
     </>
   );
 };

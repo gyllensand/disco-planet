@@ -1,5 +1,4 @@
 import { a, easings, useSpring } from "@react-spring/three";
-import { useTexture } from "@react-three/drei";
 import { useEffect, useMemo } from "react";
 import { CatmullRomCurve3, Vector3 } from "three";
 import { RING_SEGMENTS } from "./constants";
@@ -51,19 +50,19 @@ const Needle = ({
       </mesh>
       <mesh position={[getSize(-0.05), getSize(-0.03), getSize(0.08)]}>
         <circleBufferGeometry
-          args={[getSize(0.15), RING_SEGMENTS, RING_SEGMENTS]}
+          args={[getSize(0.1), RING_SEGMENTS, RING_SEGMENTS]}
         />
         <meshBasicMaterial color={secondColor} />
       </mesh>
+      <mesh position={[getSize(-1), getSize(-1), 0]}>
+        <tubeBufferGeometry args={[curve, 70, getSize(0.08), 4]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
       <mesh
-        position={[getSize(-0.325), getSize(-4.5), 0]}
+        position={[getSize(-0.325), getSize(-4.5), 0.01]}
         rotation={[0, 0, -0.6]}
       >
         <planeBufferGeometry args={[getSize(0.35), getSize(0.8)]} />
-        <meshBasicMaterial color={color} />
-      </mesh>
-      <mesh position={[getSize(-1), getSize(-1), 0]}>
-        <tubeBufferGeometry args={[curve, 70, getSize(0.08), 4]} />
         <meshBasicMaterial color={color} />
       </mesh>
     </a.group>

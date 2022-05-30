@@ -13,7 +13,7 @@ interface Props {
 const Sun = forwardRef<Mesh, Props>((props, forwardRef) => {
   return (
     <mesh ref={forwardRef as any} position={[0, 0, 0]}>
-      <circleBufferGeometry args={[0.1, 32, 32]} />
+      <circleBufferGeometry args={[0.2, 32, 32]} />
       <meshBasicMaterial color="yellow" />
     </mesh>
   );
@@ -28,7 +28,7 @@ const GodRaysEffect = (props: Props) => {
       {sunRef.current && (
         <GodRays
           sun={sunRef.current}
-          blendFunction={BlendFunction.SCREEN}
+          blendFunction={BlendFunction.ALPHA}
           samples={30}
           density={0.97}
           decay={0.96}
