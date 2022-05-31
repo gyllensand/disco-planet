@@ -5,11 +5,10 @@ import {
   MathUtils,
   Mesh,
   MeshStandardMaterial,
-  PointLight,
   Vector3,
 } from "three";
-import { start, Transport } from "tone";
-import { VINYL_NOISE, analyser, INSTRUMENTS, DRUMS } from "./App";
+import { Loop, start, Transport } from "tone";
+import { VINYL_NOISE, analyser, INSTRUMENTS, DRUMS, BUFFER } from "./App";
 import {
   RING_COUNT,
   RING_WIDTH,
@@ -18,11 +17,12 @@ import {
   THETA_LENGTH,
   BG_COLORS,
   DISC_COLORS,
+  CENTER_COLORS,
   RING_COLORS,
-  RING_COLORS_ALL,
   POINT_LIGHTS,
   RING_STATIC_RADIUS,
   RING_SEGMENTS,
+  Ring,
 } from "./constants";
 import { Draggable } from "gsap/Draggable";
 import gsap from "gsap";
@@ -43,23 +43,32 @@ const sortRandomHash = <T,>(array: T[]) => array.sort((a, b) => 0.5 - fxrand());
 const pickRandomHash = <T,>(array: T[]) =>
   array[Math.floor(fxrand() * array.length)];
 
-interface Ring {
-  width: number;
-  innerRadius: number;
-  color: string;
-  thetaStart: number;
-  thetaLength: number;
-}
-
 const range = (x1: number, y1: number, x2: number, y2: number, a: number) =>
   MathUtils.lerp(x2, y2, MathUtils.inverseLerp(x1, y1, a));
+
+export const getSizeByAspect = (size: number, aspect: number) =>
+  aspect > 1 ? size : size * aspect;
+
+const adjustColor = (color: string, amount: number) => {
+  return (
+    "#" +
+    color
+      .replace(/^#/, "")
+      .replace(/../g, (color) =>
+        (
+          "0" +
+          Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)
+        ).substr(-2)
+      )
+  );
+};
 
 const pointLights = pickRandomHash(sortRandomHash(POINT_LIGHTS));
 
 const bgTheme = pickRandomHash(BG_COLORS);
 const discTheme = bgTheme.theme === "light" ? DISC_COLORS[0] : DISC_COLORS[1];
 const centerTheme =
-  discTheme.theme === "light" ? RING_COLORS[0] : RING_COLORS[1];
+  discTheme.theme === "light" ? CENTER_COLORS[0] : CENTER_COLORS[1];
 const needleTheme = bgTheme.theme === "light" ? BG_COLORS[0] : BG_COLORS[1];
 
 const bgColor = pickRandomHash(bgTheme.colors);
@@ -73,12 +82,20 @@ const centerColor2 = pickRandomHash(
 const needleColor = pickRandomHash(
   needleTheme.colors.filter((color) => color !== discColor && color !== bgColor)
 );
+const needleColor2 = adjustColor(
+  needleColor,
+  needleTheme.theme === "light" ? -50 : 50
+);
+const haloColor = adjustColor(
+  bgColor,
+  bgColor === "#000000" ? 60 : bgTheme.theme === "light" ? -30 : 30
+);
 
 const ringCount = pickRandomHash(RING_COUNT);
 const rings = new Array(ringCount).fill(null).map<Ring>(() => {
   const width = pickRandomHash(RING_WIDTH);
   const innerRadius = pickRandomHash(RING_INNER_RADIUS);
-  const color = pickRandomHash(RING_COLORS_ALL);
+  const color = pickRandomHash(RING_COLORS);
   const thetaStart = pickRandomHash(THETA_START);
   const thetaLength = pickRandomHash(THETA_LENGTH);
 
@@ -97,26 +114,10 @@ window.$fxhashFeatures = {
   rings,
   bgColor: BG_COLORS.map((o) => o.colors),
   discColor: DISC_COLORS.map((o) => o.colors),
-  ringColors: RING_COLORS_ALL,
+  centerColors: CENTER_COLORS,
+  ringColors: RING_COLORS,
   needleColor: BG_COLORS.map((o) => o.colors),
   pointLightsPosition: POINT_LIGHTS,
-};
-
-export const getSizeByAspect = (size: number, aspect: number) =>
-  aspect > 1 ? size : size * aspect;
-
-const adjustColor = (color: string, amount: number) => {
-  return (
-    "#" +
-    color
-      .replace(/^#/, "")
-      .replace(/../g, (color) =>
-        (
-          "0" +
-          Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)
-        ).substr(-2)
-      )
-  );
 };
 
 const StaticRings = ({ aspect }: { aspect: number }) => {
@@ -181,9 +182,8 @@ const Scene = () => {
   }));
   const outerGroupRef = useRef<Mesh>();
   const groupRef = useRef<Mesh>();
-  const innerGroupRef = useRef<Mesh>();
-  const pointLightRef = useRef<PointLight>();
-  const pointLightRef2 = useRef<PointLight>();
+  const centerRef = useRef<Mesh>();
+  const haloRef = useRef<Mesh>();
   const draggableRef = useRef<Draggable>();
 
   const [isDragging, setIsDragging] = useState(false);
@@ -193,10 +193,24 @@ const Scene = () => {
   Transport.timeSignature = [4, 4];
   Transport.bpm.value = 110;
 
-  const [{ scale }, setScale] = useSpring(() => ({
-    scale: 0,
+  const [{ lightRotation }, setLightRotation] = useSpring(() => ({
+    lightRotation: [0, 0, 0],
     config: { friction: 20 },
   }));
+
+  const loop = useMemo(
+    () =>
+      new Loop((time) => {
+        console.log("loop time", time);
+        setLightRotation.start({
+          lightRotation: [0, 0, lightRotation.get()[2] + Math.PI * 4],
+        });
+        console.log("123");
+      }, "8m"),
+    [setLightRotation, lightRotation]
+  );
+
+  console.log(BUFFER)
 
   const initializeTone = useCallback(async () => {
     if (toneInitialized.current) {
@@ -212,19 +226,22 @@ const Scene = () => {
   }, []);
 
   const startTransport = useCallback(() => {
-    if (Transport.state === "stopped") {
-      Transport.start("+2");
-      Transport.scheduleOnce(() => {
-        INSTRUMENTS.setLoopPoints("8m", "16m");
-        INSTRUMENTS.loop = true;
-        DRUMS.setLoopPoints("8m", "16m");
-        DRUMS.loop = true;
-      }, "+1");
-
-      DRUMS.start(0);
-      INSTRUMENTS.start(0);
+    if (Transport.state !== "stopped") {
+      return;
     }
-  }, []);
+
+    Transport.start("+2");
+    Transport.scheduleOnce(() => {
+      INSTRUMENTS.setLoopPoints("8m", "16m");
+      INSTRUMENTS.loop = true;
+      DRUMS.setLoopPoints("8m", "16m");
+      DRUMS.loop = true;
+    }, "+1");
+
+    loop.start("8m");
+    DRUMS.start(0);
+    INSTRUMENTS.start(0);
+  }, [loop]);
 
   useFrame(() => {
     if (!isDragging) {
@@ -235,18 +252,18 @@ const Scene = () => {
     const clamp = (energy: number, threshold: number) =>
       isFinite(energy) && energy > threshold ? energy : threshold;
 
+    const clampNeg = (energy: number, threshold: number) =>
+      isFinite(energy) && energy < threshold ? energy : threshold;
+
     const bassEnergy = analyser.getEnergy().byFrequency("bass");
-    const trebleEnergy = analyser.getEnergy().byFrequency("highMid");
 
     const centerEnergy = analyser._map(bassEnergy, -100, -50, 1, 1.05);
     const centerValue = clamp(centerEnergy, 1);
+    centerRef.current!.scale.set(centerValue, centerValue, centerValue);
 
-    const lightEnergy = analyser._map(trebleEnergy, -100, -50, 0.5, 1);
-    const lightValue = clamp(lightEnergy, 0.5);
-
-    // pointLightRef.current!.intensity = lightValue;
-    // pointLightRef2.current!.intensity = lightValue;
-    innerGroupRef.current!.scale.set(centerValue, centerValue, centerValue);
+    const haloEnergy = analyser._map(bassEnergy, -100, -50, 1, 1.05);
+    const haloValue = clamp(haloEnergy, 1);
+    haloRef.current!.scale.set(haloValue, haloValue, haloValue);
   });
 
   useEffect(() => {
@@ -272,10 +289,11 @@ const Scene = () => {
     if (Transport.state === "started") {
       INSTRUMENTS.playbackRate = playbackRate;
       DRUMS.playbackRate = playbackRate;
+      loop.playbackRate = playbackRate;
     }
 
     groupRef.current.rotation.z = -draggableRef.current.rotation / 50;
-  }, []);
+  }, [loop]);
 
   const onRelease = useCallback(() => {
     setIsDragging(false);
@@ -331,26 +349,28 @@ const Scene = () => {
       <color attach="background" args={[bgColor]} />
       <OrbitControls enabled={false} />
 
-      <pointLight
-        ref={pointLightRef}
-        position={pointLights[0].map((o) => getSize(o)) as unknown as Vector3}
-        args={["#ffffff", 1]}
-      />
-      <pointLight
-        ref={pointLightRef2}
-        position={pointLights[1].map((o) => getSize(o)) as unknown as Vector3}
-        args={["#ffffff", 1]}
-      />
-
-      {/*
-      // @ts-ignore */}
-      {/* <pointLight ref={pointLightRef} position={[0, 0, 5]} args={["red", 0]} /> */}
+      <a.group rotation={lightRotation as any}>
+        <pointLight
+          position={pointLights[0].map((o) => getSize(o)) as unknown as Vector3}
+          args={["#ffffff", 1]}
+        />
+        <pointLight
+          position={pointLights[1].map((o) => getSize(o)) as unknown as Vector3}
+          args={["#ffffff", 1]}
+        />
+      </a.group>
 
       <group ref={outerGroupRef}>
         <group ref={groupRef}>
+          <mesh ref={haloRef}>
+            <ringBufferGeometry
+              args={[getSize(6), getSize(7), RING_SEGMENTS, RING_SEGMENTS]}
+            />
+            <meshBasicMaterial color={haloColor} />
+          </mesh>
           <mesh>
             <ringBufferGeometry
-              args={[getSize(2), getSize(7), RING_SEGMENTS, RING_SEGMENTS]}
+              args={[getSize(1), getSize(7), RING_SEGMENTS, RING_SEGMENTS]}
             />
             <meshPhongMaterial color={discColor} />
           </mesh>
@@ -358,7 +378,7 @@ const Scene = () => {
           <StaticRings aspect={aspect} />
           <DynamicRings aspect={aspect} />
 
-          <a.group ref={innerGroupRef}>
+          <group ref={centerRef}>
             <mesh>
               <ringBufferGeometry
                 args={[
@@ -385,14 +405,14 @@ const Scene = () => {
               />
               <meshStandardMaterial color={centerColor2} />
             </mesh>
-          </a.group>
+          </group>
         </group>
       </group>
       <Needle
         getSize={getSize}
         isActive={toneInitialized.current}
         color={needleColor}
-        secondColor={bgColor}
+        secondColor={needleColor2}
       />
     </>
   );

@@ -48,9 +48,9 @@ const Needle = ({
         />
         <meshBasicMaterial color={color} />
       </mesh>
-      <mesh position={[getSize(-0.05), getSize(-0.03), getSize(0.08)]}>
+      <mesh position={[getSize(-0.06), getSize(-0.04), getSize(0.08)]}>
         <circleBufferGeometry
-          args={[getSize(0.1), RING_SEGMENTS, RING_SEGMENTS]}
+          args={[getSize(0.15), RING_SEGMENTS, RING_SEGMENTS]}
         />
         <meshBasicMaterial color={secondColor} />
       </mesh>

@@ -1,3 +1,11 @@
+export interface Ring {
+  width: number;
+  innerRadius: number;
+  color: string;
+  thetaStart: number;
+  thetaLength: number;
+}
+
 export const RING_SEGMENTS = 80;
 
 export const THETA_START = [
@@ -104,6 +112,10 @@ export const BG_COLORS = [
     theme: "light",
     colors: ["#ffffff", "#ffce00", "#497fff", "#eb3434", "#f97b9c", "#fe7418"],
   },
+  {
+    theme: "light",
+    colors: ["#ffffff", "#ffce00", "#497fff", "#eb3434", "#f97b9c", "#fe7418"],
+  },
 ];
 
 export const DISC_COLORS = [
@@ -113,40 +125,11 @@ export const DISC_COLORS = [
   },
   {
     theme: "light",
-    colors: ["#000000", "#eb3434", "#eb3434", "#fe7418", "#fe7418"],
+    colors: ["#000000", "#eb3434", "#eb3434", "#fe7418", "#fe7418", "#344df2"],
   },
 ];
 
-// export const RING_COLORS = [
-//   {
-//     theme: "dark",
-//     colors: [
-//       "#000000",
-//       "#004451",
-//       "#111033",
-//       "#800b0b",
-//       "#053d08",
-//       "#dc0fc0",
-//       "#aa4807",
-//       "#75007e",
-//     ],
-//   },
-//   {
-//     theme: "light",
-//     colors: [
-//       "#ffffff",
-//       "#ffd600",
-//       "#497fff",
-//       "#eb3434",
-//       "#30f8a0",
-//       "#ff6aeb",
-//       "#fe7418",
-//       "#00f7fb",
-//     ],
-//   },
-// ];
-
-export const RING_COLORS = [
+export const CENTER_COLORS = [
   {
     theme: "dark",
     colors: [
@@ -175,7 +158,7 @@ export const RING_COLORS = [
   },
 ];
 
-export const RING_COLORS_ALL = [
+export const RING_COLORS = [
   "#000000",
   "#1b3342",
   "#0b0b4b",
@@ -187,6 +170,7 @@ export const RING_COLORS_ALL = [
   "#ffffff",
   "#ffce00",
   "#497fff",
+  "#344df2",
   "#eb3434",
   "#30f8a0",
   "#f97b9c",

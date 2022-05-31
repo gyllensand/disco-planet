@@ -2,7 +2,7 @@ import { Suspense, useCallback, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import Scene from "./Scene";
 import { Vector3 } from "three";
-import { Loop, Player, Sampler, start } from "tone";
+import { Loop, Player, Sampler, start, ToneAudioBuffer } from "tone";
 import DiscElement from "./DiscElement";
 import AudioEnergy from "./AudioEnergy";
 
@@ -95,6 +95,8 @@ export const DRUMS = new Player({
 export const INSTRUMENTS = new Player({
   url: `${baseUrl}instruments.mp3`,
 });
+
+export const BUFFER = new ToneAudioBuffer(`${baseUrl}instruments.mp3`);
 
 export const analyser = new AudioEnergy();
 
