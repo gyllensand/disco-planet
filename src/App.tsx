@@ -1,8 +1,8 @@
-import { Suspense, useCallback, useState } from "react";
+import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import Scene from "./Scene";
 import { Vector3 } from "three";
-import { Loop, Player, Sampler, start, ToneAudioBuffer } from "tone";
+import { Player } from "tone";
 import DiscElement from "./DiscElement";
 import AudioEnergy from "./AudioEnergy";
 
@@ -11,78 +11,8 @@ console.log(
   "color: #d80fe7; font-size: 16px; background-color: #000000;"
 );
 
-export interface Sample {
-  index: number;
-  sampler: Sampler;
-}
-
 const baseUrl = `${process.env.PUBLIC_URL}/audio/`;
-
-export const SCRATCH: Sample[] = [
-  {
-    index: 0,
-    sampler: new Sampler({
-      urls: {
-        1: "scratch-short-1.mp3",
-      },
-      baseUrl,
-    }),
-  },
-  {
-    index: 0,
-    sampler: new Sampler({
-      urls: {
-        1: "scratch-short-2.mp3",
-      },
-      baseUrl,
-    }),
-  },
-  {
-    index: 0,
-    sampler: new Sampler({
-      urls: {
-        1: "scratch-short-3.mp3",
-      },
-      baseUrl,
-    }),
-  },
-  {
-    index: 0,
-    sampler: new Sampler({
-      urls: {
-        1: "scratch-short-4.mp3",
-      },
-      baseUrl,
-    }),
-  },
-  {
-    index: 0,
-    sampler: new Sampler({
-      urls: {
-        1: "scratch-short-5.mp3",
-      },
-      baseUrl,
-    }),
-  },
-  {
-    index: 0,
-    sampler: new Sampler({
-      urls: {
-        1: "scratch-short-6.mp3",
-      },
-      baseUrl,
-    }),
-  },
-  {
-    index: 0,
-    sampler: new Sampler({
-      urls: {
-        1: "scratch-short-1.mp3",
-      },
-      baseUrl,
-    }),
-  },
-];
+export const analyser = new AudioEnergy();
 
 export const VINYL_NOISE = new Player({
   url: `${baseUrl}vinyl-noise.mp3`,
@@ -95,10 +25,6 @@ export const DRUMS = new Player({
 export const INSTRUMENTS = new Player({
   url: `${baseUrl}instruments.mp3`,
 });
-
-export const BUFFER = new ToneAudioBuffer(`${baseUrl}instruments.mp3`);
-
-export const analyser = new AudioEnergy();
 
 const App = () => {
   return (

@@ -6,6 +6,13 @@ export interface Ring {
   thetaLength: number;
 }
 
+export interface Theme {
+  theme: "light" | "dark";
+  colors: string[];
+}
+
+export const DEFAULT_BPM = 110;
+
 export const RING_SEGMENTS = 80;
 
 export const THETA_START = [
@@ -103,7 +110,7 @@ export const POINT_LIGHTS = [
   ],
 ];
 
-export const BG_COLORS = [
+export const BG_COLORS: Theme[] = [
   {
     theme: "dark",
     colors: ["#000000", "#0b0b4b", "#1b3342", "#1b4225", "#421b1b", "#48005b"],
@@ -118,7 +125,7 @@ export const BG_COLORS = [
   },
 ];
 
-export const DISC_COLORS = [
+export const DISC_COLORS: Theme[] = [
   {
     theme: "dark",
     colors: ["#000000", "#0b0b4b", "#1b3342", "#1b4225", "#421b1b", "#48005b"],
@@ -129,7 +136,7 @@ export const DISC_COLORS = [
   },
 ];
 
-export const CENTER_COLORS = [
+export const CENTER_COLORS: Theme[] = [
   {
     theme: "dark",
     colors: [

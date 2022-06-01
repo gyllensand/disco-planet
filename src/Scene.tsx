@@ -1,14 +1,9 @@
 import { OrbitControls } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  MathUtils,
-  Mesh,
-  MeshStandardMaterial,
-  Vector3,
-} from "three";
+import { MathUtils, Mesh, MeshStandardMaterial, Vector3 } from "three";
 import { Loop, start, Transport } from "tone";
-import { VINYL_NOISE, analyser, INSTRUMENTS, DRUMS, BUFFER } from "./App";
+import { analyser, DRUMS, INSTRUMENTS, VINYL_NOISE } from "./App";
 import {
   RING_COUNT,
   RING_WIDTH,
@@ -23,45 +18,20 @@ import {
   RING_STATIC_RADIUS,
   RING_SEGMENTS,
   Ring,
+  DEFAULT_BPM,
 } from "./constants";
 import { Draggable } from "gsap/Draggable";
 import gsap from "gsap";
 import Needle from "./Needle";
 import { a, useSpring } from "@react-spring/three";
+import {
+  pickRandomHash,
+  sortRandomHash,
+  adjustColor,
+  getSizeByAspect,
+  range,
+} from "./utils";
 const Momentum = require("./momentum");
-
-declare const fxrand: () => number;
-
-const sortRandom = <T,>(array: T[]) =>
-  array.sort((a, b) => 0.5 - Math.random());
-
-const pickRandom = <T,>(array: T[]) =>
-  array[Math.floor(Math.random() * array.length)];
-
-const sortRandomHash = <T,>(array: T[]) => array.sort((a, b) => 0.5 - fxrand());
-
-const pickRandomHash = <T,>(array: T[]) =>
-  array[Math.floor(fxrand() * array.length)];
-
-const range = (x1: number, y1: number, x2: number, y2: number, a: number) =>
-  MathUtils.lerp(x2, y2, MathUtils.inverseLerp(x1, y1, a));
-
-export const getSizeByAspect = (size: number, aspect: number) =>
-  aspect > 1 ? size : size * aspect;
-
-const adjustColor = (color: string, amount: number) => {
-  return (
-    "#" +
-    color
-      .replace(/^#/, "")
-      .replace(/../g, (color) =>
-        (
-          "0" +
-          Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)
-        ).substr(-2)
-      )
-  );
-};
 
 const pointLights = pickRandomHash(sortRandomHash(POINT_LIGHTS));
 
@@ -110,14 +80,12 @@ const rings = new Array(ringCount).fill(null).map<Ring>(() => {
 
 // @ts-ignore
 window.$fxhashFeatures = {
+  bgColor,
+  discColor,
+  centerColor1: centerColor,
+  centerColor2,
+  needleColor,
   ringCount,
-  rings,
-  bgColor: BG_COLORS.map((o) => o.colors),
-  discColor: DISC_COLORS.map((o) => o.colors),
-  centerColors: CENTER_COLORS,
-  ringColors: RING_COLORS,
-  needleColor: BG_COLORS.map((o) => o.colors),
-  pointLightsPosition: POINT_LIGHTS,
 };
 
 const StaticRings = ({ aspect }: { aspect: number }) => {
@@ -191,7 +159,7 @@ const Scene = () => {
   const [audioActive, setAudioActive] = useState(false);
 
   Transport.timeSignature = [4, 4];
-  Transport.bpm.value = 110;
+  Transport.bpm.value = DEFAULT_BPM;
 
   const [{ lightRotation }, setLightRotation] = useSpring(() => ({
     lightRotation: [0, 0, 0],
@@ -200,17 +168,13 @@ const Scene = () => {
 
   const loop = useMemo(
     () =>
-      new Loop((time) => {
-        console.log("loop time", time);
+      new Loop(() => {
         setLightRotation.start({
           lightRotation: [0, 0, lightRotation.get()[2] + Math.PI * 4],
         });
-        console.log("123");
       }, "8m"),
     [setLightRotation, lightRotation]
   );
-
-  console.log(BUFFER)
 
   const initializeTone = useCallback(async () => {
     if (toneInitialized.current) {
@@ -252,18 +216,12 @@ const Scene = () => {
     const clamp = (energy: number, threshold: number) =>
       isFinite(energy) && energy > threshold ? energy : threshold;
 
-    const clampNeg = (energy: number, threshold: number) =>
-      isFinite(energy) && energy < threshold ? energy : threshold;
-
     const bassEnergy = analyser.getEnergy().byFrequency("bass");
+    const scaleEnergy = analyser._map(bassEnergy, -100, -50, 1, 1.05);
+    const scaleValue = clamp(scaleEnergy, 1);
 
-    const centerEnergy = analyser._map(bassEnergy, -100, -50, 1, 1.05);
-    const centerValue = clamp(centerEnergy, 1);
-    centerRef.current!.scale.set(centerValue, centerValue, centerValue);
-
-    const haloEnergy = analyser._map(bassEnergy, -100, -50, 1, 1.05);
-    const haloValue = clamp(haloEnergy, 1);
-    haloRef.current!.scale.set(haloValue, haloValue, haloValue);
+    centerRef.current!.scale.set(scaleValue, scaleValue, scaleValue);
+    haloRef.current!.scale.set(scaleValue, scaleValue, scaleValue);
   });
 
   useEffect(() => {
@@ -281,7 +239,7 @@ const Scene = () => {
     const interpolatedRate = MathUtils.clamp(
       range(-10, 10, 0, 2, draggableRef.current.deltaX),
       0.3,
-      2
+      1.7
     );
 
     const playbackRate = Math.round(interpolatedRate * 100) / 100;
@@ -289,11 +247,10 @@ const Scene = () => {
     if (Transport.state === "started") {
       INSTRUMENTS.playbackRate = playbackRate;
       DRUMS.playbackRate = playbackRate;
-      loop.playbackRate = playbackRate;
     }
 
     groupRef.current.rotation.z = -draggableRef.current.rotation / 50;
-  }, [loop]);
+  }, []);
 
   const onRelease = useCallback(() => {
     setIsDragging(false);
