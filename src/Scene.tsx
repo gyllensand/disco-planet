@@ -39,7 +39,7 @@ const bgTheme = pickRandomHash(BG_COLORS);
 const discTheme = bgTheme.theme === "light" ? DISC_COLORS[0] : DISC_COLORS[1];
 const centerTheme =
   discTheme.theme === "light" ? CENTER_COLORS[0] : CENTER_COLORS[1];
-const needleTheme = bgTheme.theme === "light" ? BG_COLORS[0] : BG_COLORS[1];
+const needleTheme = bgTheme.theme === "light" ? CENTER_COLORS[0] : CENTER_COLORS[1];
 
 const bgColor = pickRandomHash(bgTheme.colors);
 const discColor = pickRandomHash(discTheme.colors);
@@ -238,8 +238,8 @@ const Scene = () => {
 
     const interpolatedRate = MathUtils.clamp(
       range(-10, 10, 0, 2, draggableRef.current.deltaX),
-      0.3,
-      1.7
+      0.5,
+      1.5
     );
 
     const playbackRate = Math.round(interpolatedRate * 100) / 100;
