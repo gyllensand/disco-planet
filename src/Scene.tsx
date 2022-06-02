@@ -196,9 +196,9 @@ const Scene = () => {
 
     Transport.start("+2");
     Transport.scheduleOnce(() => {
-      INSTRUMENTS.setLoopPoints("8m", "16m");
+      INSTRUMENTS.setLoopPoints("8m", "24m");
       INSTRUMENTS.loop = true;
-      DRUMS.setLoopPoints("8m", "16m");
+      DRUMS.setLoopPoints("8m", "24m");
       DRUMS.loop = true;
     }, "+1");
 
